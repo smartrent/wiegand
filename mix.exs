@@ -48,7 +48,7 @@ defmodule Wiegand.MixProject do
 
   defp dialyzer() do
     [
-      flags: [:unmatched_returns, :error_handling, :missing_return, :extra_return]
+      flags: [:unmatched_returns, :error_handling, :extra_return]
     ]
   end
 
