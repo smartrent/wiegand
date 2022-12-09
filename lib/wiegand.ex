@@ -7,7 +7,7 @@ defmodule Wiegand do
   Even parity is calculated over the n-most-significant bits, and odd parity is
   calculated over the n-least-significant bits.
 
-  ## Assumptions
+  ### Assumptions
 
   This package does not currently support every type of Wiegand card format.
   For simplicity's sake, it currently makes the following assumptions:
@@ -19,8 +19,8 @@ defmodule Wiegand do
   * Parity checking is the only type of error checking supported
   """
 
-  require Integer
   alias Wiegand.{CardData, CardFormat}
+  require Integer
 
   @type decode_error :: :bit_count | :even_parity_mismatch | :odd_parity_mismatch
 
