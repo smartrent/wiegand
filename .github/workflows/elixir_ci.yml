@@ -1,0 +1,90 @@
+name: Elixir CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - .github/workflows/elixir_ci.yml
+      - '**.ex'
+      - '**.exs'
+      - mix.lock
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check (Elixir ${{ matrix.elixir }} / OTP ${{ matrix.otp }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # TODO: bump to 1.17/OTP27 once upgrade is coordinated
+          - elixir: "1.14.2"
+            otp: "25.1.2"
+            alpine: "3.16.2"
+            check: true
+          # Minimum supported version per mix.exs elixir: "~> 1.13"
+          - elixir: "1.13.4"
+            otp: "24.3"
+            alpine: "3.15.0"
+            check: false
+    container:
+      image: hexpm/elixir:${{ matrix.elixir }}-erlang-${{ matrix.otp }}-alpine-${{ matrix.alpine }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system deps
+        run: apk add --no-cache git build-base
+
+      - name: Install Hex + Rebar
+        run: |
+          mix local.hex --force
+          mix local.rebar --force
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{ matrix.elixir }}-${{ matrix.otp }}-${{ hashFiles('mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-${{ matrix.elixir }}-${{ matrix.otp }}-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Check unused deps
+        if: matrix.check
+        run: mix deps.unlock --check-unused
+
+      - name: Compile
+        run: mix compile
+
+      - name: Format check
+        if: matrix.check
+        run: mix format --check-formatted
+
+      - name: Credo
+        if: matrix.check
+        run: mix credo
+
+      - name: Dialyzer
+        if: matrix.check
+        run: mix dialyzer
+
+      - name: Test
+        run: mix test
+
+      - name: Build docs
+        if: matrix.check
+        run: mix docs
+
+      - name: Build hex package
+        if: matrix.check
+        run: mix hex.build
